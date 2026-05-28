@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
 const HERO_IMAGE = "https://cdn.poehali.dev/projects/3c8ce224-7168-4b45-b274-eeb9a4e07598/files/b1a5b102-bdb6-42c7-9dcf-2903bc74fa55.jpg";
@@ -73,26 +73,69 @@ const STATS = [
   { value: "24/7", label: "Поддержка", icon: "Headphones" },
 ];
 
+// Тип аккаунта
+type Account = { login: string; email: string; password: string; skin: string; via: "email" | "google"; createdAt: string };
+
+const LS_KEY = "dezeland_accounts";
+const LS_SESSION = "dezeland_session";
+
+function loadAccounts(): Account[] {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+}
+function saveAccounts(list: Account[]) {
+  localStorage.setItem(LS_KEY, JSON.stringify(list));
+}
+
 export default function Index() {
   const [activeSection, setActiveSection] = useState<Section>("home");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [regForm, setRegForm] = useState({ login: "", email: "", password: "", confirm: "" });
-  const [loginForm, setLoginForm] = useState({ login: "", password: "" });
-  const [cabinetTab, setCabinetTab] = useState<"login" | "profile">("login");
 
-  // Registration flow
+  // ── Auth ──────────────────────────────────────────────
+  const [currentUser, setCurrentUser] = useState<Account | null>(() => {
+    const s = localStorage.getItem(LS_SESSION);
+    if (!s) return null;
+    const accs = loadAccounts();
+    return accs.find(a => a.login === s) || null;
+  });
+
+  const logout = () => { localStorage.removeItem(LS_SESSION); setCurrentUser(null); setCabinetTab("login"); };
+
+  // ── Cabinet ───────────────────────────────────────────
+  const [cabinetTab, setCabinetTab] = useState<"login" | "profile">(currentUser ? "profile" : "login");
+  const [loginForm, setLoginForm] = useState({ login: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = () => {
+    setLoginError("");
+    const accs = loadAccounts();
+    const found = accs.find(
+      a => (a.login === loginForm.login || a.email === loginForm.login) && a.password === loginForm.password
+    );
+    if (!found) { setLoginError("Неверный никнейм/email или пароль"); return; }
+    localStorage.setItem(LS_SESSION, found.login);
+    setCurrentUser(found);
+    setCabinetTab("profile");
+  };
+
+  // ── Registration ──────────────────────────────────────
   type RegStep = "choose" | "email-form" | "google-setup";
   const [regStep, setRegStep] = useState<RegStep>("choose");
 
-  // Google setup step
-  const [googleForm, setGoogleForm] = useState({ nick: "" });
+  const [regForm, setRegForm] = useState({ login: "", email: "", password: "", confirm: "" });
+  const [regErrors, setRegErrors] = useState<Record<string, string>>({});
+  const [regSuccess, setRegSuccess] = useState(false);
+
+  const [googleForm, setGoogleForm] = useState({ nick: "", password: "", confirm: "" });
+  const [googleErrors, setGoogleErrors] = useState<Record<string, string>>({});
+  const [googleSuccess, setGoogleSuccess] = useState(false);
+
   const SKIN_PRESETS = [
-    { id: "steve", label: "Стив", color: "#6d9eeb", emoji: "🧑" },
-    { id: "alex",  label: "Алекс",  color: "#93c47d", emoji: "👩" },
-    { id: "warrior", label: "Воин", color: "#e06666", emoji: "⚔️" },
-    { id: "mage", label: "Маг", color: "#a78bfa", emoji: "🔮" },
-    { id: "ranger", label: "Рейнджер", color: "#fbbf24", emoji: "🏹" },
-    { id: "pirate", label: "Пират", color: "#fb923c", emoji: "🏴‍☠️" },
+    { id: "steve",   label: "Стив",     emoji: "🧑" },
+    { id: "alex",    label: "Алекс",    emoji: "👩" },
+    { id: "warrior", label: "Воин",     emoji: "⚔️" },
+    { id: "mage",    label: "Маг",      emoji: "🔮" },
+    { id: "ranger",  label: "Рейнджер", emoji: "🏹" },
+    { id: "pirate",  label: "Пират",    emoji: "🏴‍☠️" },
   ];
   const [selectedSkin, setSelectedSkin] = useState("steve");
   const [skinGenerating, setSkinGenerating] = useState(false);
@@ -108,46 +151,58 @@ export default function Index() {
     }, 1800);
   };
 
-  // Registration state
-  const [regSuccess, setRegSuccess] = useState(false);
-  const [regErrors, setRegErrors] = useState<Record<string, string>>({});
-  const [googleSuccess, setGoogleSuccess] = useState(false);
-  const [googleErrors, setGoogleErrors] = useState<Record<string, string>>({});
-
-  // Registered accounts (in-memory demo)
-  const accounts = useRef<{ login: string; email: string; password: string }[]>([]);
-
   const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   const handleEmailRegister = () => {
     const errs: Record<string, string> = {};
+    const accs = loadAccounts();
     if (!regForm.login.trim() || regForm.login.length < 3) errs.login = "Никнейм: минимум 3 символа";
+    else if (!/^[a-zA-Z0-9_]+$/.test(regForm.login)) errs.login = "Только латиница, цифры, _";
+    else if (accs.find(a => a.login === regForm.login)) errs.login = "Никнейм уже занят";
     if (!validateEmail(regForm.email)) errs.email = "Введите корректный email";
+    else if (accs.find(a => a.email === regForm.email)) errs.email = "Email уже зарегистрирован";
     if (regForm.password.length < 6) errs.password = "Пароль: минимум 6 символов";
     if (regForm.password !== regForm.confirm) errs.confirm = "Пароли не совпадают";
-    if (accounts.current.find(a => a.login === regForm.login)) errs.login = "Никнейм уже занят";
-    if (accounts.current.find(a => a.email === regForm.email)) errs.email = "Email уже зарегистрирован";
     if (Object.keys(errs).length) { setRegErrors(errs); return; }
-    accounts.current.push({ login: regForm.login, email: regForm.email, password: regForm.password });
+    const newAcc: Account = { login: regForm.login, email: regForm.email, password: regForm.password, skin: selectedSkin, via: "email", createdAt: new Date().toLocaleDateString("ru") };
+    saveAccounts([...accs, newAcc]);
     setRegErrors({});
     setRegSuccess(true);
   };
 
   const handleGoogleRegister = () => {
     const errs: Record<string, string> = {};
+    const accs = loadAccounts();
     if (!googleForm.nick.trim() || googleForm.nick.length < 3) errs.nick = "Никнейм: минимум 3 символа";
-    if (!/^[a-zA-Z0-9_]+$/.test(googleForm.nick)) errs.nick = "Только латиница, цифры, _";
-    if (accounts.current.find(a => a.login === googleForm.nick)) errs.nick = "Никнейм уже занят";
-    if (!selectedSkin && !generatedSkin) errs.skin = "Выбери скин";
+    else if (!/^[a-zA-Z0-9_]+$/.test(googleForm.nick)) errs.nick = "Только латиница, цифры, _";
+    else if (accs.find(a => a.login === googleForm.nick)) errs.nick = "Никнейм уже занят";
+    if (googleForm.password.length < 6) errs.password = "Пароль: минимум 6 символов";
+    if (googleForm.password !== googleForm.confirm) errs.confirm = "Пароли не совпадают";
     if (Object.keys(errs).length) { setGoogleErrors(errs); return; }
-    accounts.current.push({ login: googleForm.nick, email: "google@user", password: "" });
+    const skinId = generatedSkin || selectedSkin;
+    const newAcc: Account = { login: googleForm.nick, email: "google@" + googleForm.nick, password: googleForm.password, skin: skinId, via: "google", createdAt: new Date().toLocaleDateString("ru") };
+    saveAccounts([...accs, newAcc]);
     setGoogleErrors({});
     setGoogleSuccess(true);
   };
 
+  // Sync cabinetTab when user logs in from register success screen
+  useEffect(() => {
+    if (currentUser) setCabinetTab("profile");
+  }, [currentUser]);
+
   const navigate = (s: Section) => {
     setActiveSection(s);
     setMobileMenuOpen(false);
+    if (s === "register") {
+      setRegStep("choose");
+      setRegSuccess(false);
+      setGoogleSuccess(false);
+      setRegForm({ login: "", email: "", password: "", confirm: "" });
+      setGoogleForm({ nick: "", password: "", confirm: "" });
+      setRegErrors({});
+      setGoogleErrors({});
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -502,7 +557,7 @@ export default function Index() {
                     <Icon name="Check" size={14} className="text-mc-green ml-auto" />
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     {/* Ник */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-400 mb-1.5">
@@ -587,6 +642,30 @@ export default function Index() {
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    {/* Пароль для Google-аккаунта */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">Придумай пароль</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={googleForm.password}
+                        onChange={(e) => { setGoogleForm({ ...googleForm, password: e.target.value }); setGoogleErrors(p => ({ ...p, password: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${googleErrors.password ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
+                      />
+                      {googleErrors.password && <p className="text-red-400 text-xs mt-1">{googleErrors.password}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">Повтор пароля</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={googleForm.confirm}
+                        onChange={(e) => { setGoogleForm({ ...googleForm, confirm: e.target.value }); setGoogleErrors(p => ({ ...p, confirm: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${googleErrors.confirm ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
+                      />
+                      {googleErrors.confirm && <p className="text-red-400 text-xs mt-1">{googleErrors.confirm}</p>}
                     </div>
 
                     <button
@@ -836,8 +915,8 @@ export default function Index() {
                         type="text"
                         placeholder="CoolPlayer2025"
                         value={loginForm.login}
-                        onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-gold/60 transition-colors"
+                        onChange={(e) => { setLoginForm({ ...loginForm, login: e.target.value }); setLoginError(""); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${loginError ? "border-red-500/60" : "border-white/10 focus:border-mc-gold/60"}`}
                       />
                     </div>
                     <div>
@@ -846,12 +925,14 @@ export default function Index() {
                         type="password"
                         placeholder="••••••••"
                         value={loginForm.password}
-                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-gold/60 transition-colors"
+                        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                        onChange={(e) => { setLoginForm({ ...loginForm, password: e.target.value }); setLoginError(""); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${loginError ? "border-red-500/60" : "border-white/10 focus:border-mc-gold/60"}`}
                       />
+                      {loginError && <p className="text-red-400 text-xs mt-1">{loginError}</p>}
                     </div>
                     <button
-                      onClick={() => setCabinetTab("profile")}
+                      onClick={handleLogin}
                       className="w-full bg-mc-gold text-mc-dark font-pixel py-4 rounded-lg hover:bg-yellow-300 transition-all glow-gold hover:scale-105 flex items-center justify-center gap-2"
                     >
                       <Icon name="LogIn" size={18} />
@@ -866,38 +947,40 @@ export default function Index() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : currentUser ? (
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="bg-[#111827] border border-mc-gold/30 rounded-2xl p-6 glow-gold">
                   <div className="text-center mb-6">
-                    <div className="w-20 h-20 bg-gradient-to-br from-mc-green to-mc-blue rounded-xl mx-auto mb-3 flex items-center justify-center font-pixel text-3xl text-mc-dark">
-                      CP
+                    <div className="w-20 h-20 bg-gradient-to-br from-mc-green to-mc-blue rounded-xl mx-auto mb-3 flex items-center justify-center text-4xl">
+                      {SKIN_PRESETS.find(s => s.id === currentUser.skin)?.emoji ?? currentUser.skin}
                     </div>
-                    <h3 className="font-pixel text-xl text-white">CoolPlayer</h3>
-                    <div className="inline-flex items-center gap-1 bg-mc-blue/10 border border-mc-blue/30 rounded-full px-3 py-1 mt-2">
-                      <span className="text-mc-blue text-xs font-bold">⚔️ РЫЦАРЬ</span>
+                    <h3 className="font-pixel text-xl text-white">{currentUser.login}</h3>
+                    <div className="inline-flex items-center gap-1 bg-mc-green/10 border border-mc-green/30 rounded-full px-3 py-1 mt-2">
+                      <span className="text-mc-green text-xs font-bold">
+                        {currentUser.via === "google" ? "🌐 Google" : "✉️ Email"}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between text-gray-400">
+                      <span>Email</span>
+                      <span className="text-white font-semibold text-xs truncate max-w-[120px]">{currentUser.email}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Скин</span>
+                      <span className="text-white font-semibold">{SKIN_PRESETS.find(s => s.id === currentUser.skin)?.label ?? currentUser.skin}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Дата регистрации</span>
+                      <span className="text-white font-semibold">{currentUser.createdAt}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
                       <span>Монет</span>
-                      <span className="text-mc-gold font-bold">15 230 💰</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Наигранных часов</span>
-                      <span className="text-white font-semibold">847 ч</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Рейтинг PvP</span>
-                      <span className="text-mc-green font-bold">#143</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>На сервере с</span>
-                      <span className="text-white font-semibold">Янв 2024</span>
+                      <span className="text-mc-gold font-bold">0 💰</span>
                     </div>
                   </div>
                   <button
-                    onClick={() => setCabinetTab("login")}
+                    onClick={logout}
                     className="w-full mt-6 border border-red-500/30 text-red-400 font-semibold py-2.5 rounded-lg hover:bg-red-500/10 transition-all text-sm flex items-center justify-center gap-2"
                   >
                     <Icon name="LogOut" size={14} />
@@ -955,6 +1038,17 @@ export default function Index() {
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-md mx-auto">
+                <div className="bg-[#111827] border border-red-500/20 rounded-2xl p-8 text-center">
+                  <Icon name="AlertCircle" size={36} className="text-red-400 mx-auto mb-3" />
+                  <h2 className="font-pixel text-xl text-white mb-2">Нет доступа</h2>
+                  <p className="text-gray-500 text-sm mb-6">Войди в аккаунт чтобы открыть кабинет.</p>
+                  <button onClick={() => setCabinetTab("login")} className="bg-mc-gold text-mc-dark font-pixel px-6 py-3 rounded-lg hover:bg-yellow-300 transition-all">
+                    ВОЙТИ
+                  </button>
                 </div>
               </div>
             )}
