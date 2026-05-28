@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
 const HERO_IMAGE = "https://cdn.poehali.dev/projects/3c8ce224-7168-4b45-b274-eeb9a4e07598/files/b1a5b102-bdb6-42c7-9dcf-2903bc74fa55.jpg";
@@ -106,6 +106,43 @@ export default function Index() {
       setGeneratedSkin(randomSkins[Math.floor(Math.random() * randomSkins.length)]);
       setSkinGenerating(false);
     }, 1800);
+  };
+
+  // Registration state
+  const [regSuccess, setRegSuccess] = useState(false);
+  const [regErrors, setRegErrors] = useState<Record<string, string>>({});
+  const [googleSuccess, setGoogleSuccess] = useState(false);
+  const [googleErrors, setGoogleErrors] = useState<Record<string, string>>({});
+
+  // Registered accounts (in-memory demo)
+  const accounts = useRef<{ login: string; email: string; password: string }[]>([]);
+
+  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  const handleEmailRegister = () => {
+    const errs: Record<string, string> = {};
+    if (!regForm.login.trim() || regForm.login.length < 3) errs.login = "Никнейм: минимум 3 символа";
+    if (!validateEmail(regForm.email)) errs.email = "Введите корректный email";
+    if (regForm.password.length < 6) errs.password = "Пароль: минимум 6 символов";
+    if (regForm.password !== regForm.confirm) errs.confirm = "Пароли не совпадают";
+    if (accounts.current.find(a => a.login === regForm.login)) errs.login = "Никнейм уже занят";
+    if (accounts.current.find(a => a.email === regForm.email)) errs.email = "Email уже зарегистрирован";
+    if (Object.keys(errs).length) { setRegErrors(errs); return; }
+    accounts.current.push({ login: regForm.login, email: regForm.email, password: regForm.password });
+    setRegErrors({});
+    setRegSuccess(true);
+  };
+
+  const handleGoogleRegister = () => {
+    const errs: Record<string, string> = {};
+    if (!googleForm.nick.trim() || googleForm.nick.length < 3) errs.nick = "Никнейм: минимум 3 символа";
+    if (!/^[a-zA-Z0-9_]+$/.test(googleForm.nick)) errs.nick = "Только латиница, цифры, _";
+    if (accounts.current.find(a => a.login === googleForm.nick)) errs.nick = "Никнейм уже занят";
+    if (!selectedSkin && !generatedSkin) errs.skin = "Выбери скин";
+    if (Object.keys(errs).length) { setGoogleErrors(errs); return; }
+    accounts.current.push({ login: googleForm.nick, email: "google@user", password: "" });
+    setGoogleErrors({});
+    setGoogleSuccess(true);
   };
 
   const navigate = (s: Section) => {
@@ -356,9 +393,9 @@ export default function Index() {
               )}
 
               {/* STEP 2A — обычная форма */}
-              {regStep === "email-form" && (
+              {regStep === "email-form" && !regSuccess && (
                 <div className="bg-[#111827] border border-white/10 rounded-2xl p-8 animate-fade-in">
-                  <button onClick={() => setRegStep("choose")} className="flex items-center gap-1 text-gray-500 hover:text-white text-sm mb-5 transition-colors">
+                  <button onClick={() => { setRegStep("choose"); setRegErrors({}); }} className="flex items-center gap-1 text-gray-500 hover:text-white text-sm mb-5 transition-colors">
                     <Icon name="ArrowLeft" size={14} /> Назад
                   </button>
                   <div className="space-y-4">
@@ -368,9 +405,10 @@ export default function Index() {
                         type="text"
                         placeholder="CoolPlayer2025"
                         value={regForm.login}
-                        onChange={(e) => setRegForm({ ...regForm, login: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                        onChange={(e) => { setRegForm({ ...regForm, login: e.target.value }); setRegErrors(p => ({ ...p, login: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${regErrors.login ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
                       />
+                      {regErrors.login && <p className="text-red-400 text-xs mt-1">{regErrors.login}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-400 mb-1.5">Email</label>
@@ -378,9 +416,10 @@ export default function Index() {
                         type="email"
                         placeholder="you@example.com"
                         value={regForm.email}
-                        onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                        onChange={(e) => { setRegForm({ ...regForm, email: e.target.value }); setRegErrors(p => ({ ...p, email: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${regErrors.email ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
                       />
+                      {regErrors.email && <p className="text-red-400 text-xs mt-1">{regErrors.email}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-400 mb-1.5">Пароль</label>
@@ -388,9 +427,10 @@ export default function Index() {
                         type="password"
                         placeholder="••••••••"
                         value={regForm.password}
-                        onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                        onChange={(e) => { setRegForm({ ...regForm, password: e.target.value }); setRegErrors(p => ({ ...p, password: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${regErrors.password ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
                       />
+                      {regErrors.password && <p className="text-red-400 text-xs mt-1">{regErrors.password}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-400 mb-1.5">Повтор пароля</label>
@@ -398,11 +438,15 @@ export default function Index() {
                         type="password"
                         placeholder="••••••••"
                         value={regForm.confirm}
-                        onChange={(e) => setRegForm({ ...regForm, confirm: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                        onChange={(e) => { setRegForm({ ...regForm, confirm: e.target.value }); setRegErrors(p => ({ ...p, confirm: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${regErrors.confirm ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
                       />
+                      {regErrors.confirm && <p className="text-red-400 text-xs mt-1">{regErrors.confirm}</p>}
                     </div>
-                    <button className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105">
+                    <button
+                      onClick={handleEmailRegister}
+                      className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105"
+                    >
                       <Icon name="UserPlus" size={18} />
                       СОЗДАТЬ АККАУНТ
                     </button>
@@ -416,10 +460,33 @@ export default function Index() {
                 </div>
               )}
 
+              {/* Успех email-регистрации */}
+              {regStep === "email-form" && regSuccess && (
+                <div className="bg-[#111827] border border-mc-green/30 rounded-2xl p-8 text-center animate-fade-in glow-green">
+                  <div className="text-5xl mb-4">🎉</div>
+                  <h2 className="font-pixel text-2xl text-white mb-2">Аккаунт создан!</h2>
+                  <p className="text-gray-400 mb-1">Добро пожаловать, <span className="text-mc-green font-bold">{regForm.login}</span>!</p>
+                  <p className="text-gray-500 text-sm mb-6">Теперь скачай лаунчер и войди в игру.</p>
+                  <button
+                    onClick={() => navigate("download")}
+                    className="w-full bg-mc-green text-mc-dark font-pixel py-3.5 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105"
+                  >
+                    <Icon name="Download" size={18} />
+                    СКАЧАТЬ ЛАУНЧЕР
+                  </button>
+                  <button
+                    onClick={() => navigate("cabinet")}
+                    className="w-full mt-3 border border-white/10 text-gray-400 font-semibold py-3 rounded-lg hover:bg-white/5 transition-all text-sm"
+                  >
+                    Перейти в кабинет
+                  </button>
+                </div>
+              )}
+
               {/* STEP 2B — Google setup: ник + скин */}
-              {regStep === "google-setup" && (
+              {regStep === "google-setup" && !googleSuccess && (
                 <div className="bg-[#111827] border border-white/10 rounded-2xl p-8 animate-fade-in">
-                  <button onClick={() => setRegStep("choose")} className="flex items-center gap-1 text-gray-500 hover:text-white text-sm mb-5 transition-colors">
+                  <button onClick={() => { setRegStep("choose"); setGoogleErrors({}); }} className="flex items-center gap-1 text-gray-500 hover:text-white text-sm mb-5 transition-colors">
                     <Icon name="ArrowLeft" size={14} /> Назад
                   </button>
 
@@ -445,10 +512,13 @@ export default function Index() {
                         type="text"
                         placeholder="CoolPlayer2025"
                         value={googleForm.nick}
-                        onChange={(e) => setGoogleForm({ ...googleForm, nick: e.target.value })}
-                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                        onChange={(e) => { setGoogleForm({ ...googleForm, nick: e.target.value }); setGoogleErrors(p => ({ ...p, nick: "" })); }}
+                        className={`w-full bg-mc-dark border rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition-colors ${googleErrors.nick ? "border-red-500/60" : "border-white/10 focus:border-mc-green/60"}`}
                       />
-                      <p className="text-gray-600 text-xs mt-1">Латиница, цифры, подчёркивание. 3–16 символов.</p>
+                      {googleErrors.nick
+                        ? <p className="text-red-400 text-xs mt-1">{googleErrors.nick}</p>
+                        : <p className="text-gray-600 text-xs mt-1">Латиница, цифры, подчёркивание. 3–16 символов.</p>
+                      }
                     </div>
 
                     {/* Скин */}
@@ -519,11 +589,37 @@ export default function Index() {
                       )}
                     </div>
 
-                    <button className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105">
+                    <button
+                      onClick={handleGoogleRegister}
+                      className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105"
+                    >
                       <Icon name="LogIn" size={18} />
                       СОЗДАТЬ АККАУНТ
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Успех Google-регистрации */}
+              {regStep === "google-setup" && googleSuccess && (
+                <div className="bg-[#111827] border border-mc-green/30 rounded-2xl p-8 text-center animate-fade-in glow-green">
+                  <div className="text-5xl mb-4">🎉</div>
+                  <h2 className="font-pixel text-2xl text-white mb-2">Аккаунт создан!</h2>
+                  <p className="text-gray-400 mb-1">Добро пожаловать, <span className="text-mc-green font-bold">{googleForm.nick}</span>!</p>
+                  <p className="text-gray-500 text-sm mb-6">Теперь скачай лаунчер и войди в игру.</p>
+                  <button
+                    onClick={() => navigate("download")}
+                    className="w-full bg-mc-green text-mc-dark font-pixel py-3.5 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105"
+                  >
+                    <Icon name="Download" size={18} />
+                    СКАЧАТЬ ЛАУНЧЕР
+                  </button>
+                  <button
+                    onClick={() => navigate("cabinet")}
+                    className="w-full mt-3 border border-white/10 text-gray-400 font-semibold py-3 rounded-lg hover:bg-white/5 transition-all text-sm"
+                  >
+                    Перейти в кабинет
+                  </button>
                 </div>
               )}
             </div>
@@ -554,10 +650,15 @@ export default function Index() {
                   <h2 className="font-pixel text-2xl text-white mb-2">DezeLand Launcher</h2>
                   <p className="text-gray-400 mb-4">Поддержка Java & Bedrock · Автообновление · 1.20.4</p>
                   <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                    <button className="flex items-center gap-2 bg-mc-blue text-mc-dark font-pixel px-6 py-3 rounded-lg hover:bg-blue-300 transition-all glow-blue hover:scale-105">
+                    <a
+                      href="https://drive.google.com/drive/folders/1sOsWE_eanlAEHtSm6s73ryn6YaCnbXGz?usp=sharing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-mc-blue text-mc-dark font-pixel px-6 py-3 rounded-lg hover:bg-blue-300 transition-all glow-blue hover:scale-105"
+                    >
                       <Icon name="Monitor" size={18} />
                       Windows
-                    </button>
+                    </a>
                     <button className="flex items-center gap-2 bg-white/5 border border-white/10 text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition-all">
                       <Icon name="Apple" size={18} />
                       macOS
