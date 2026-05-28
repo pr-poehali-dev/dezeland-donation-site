@@ -166,6 +166,9 @@ export default function Index() {
     if (Object.keys(errs).length) { setRegErrors(errs); return; }
     const newAcc: Account = { login: regForm.login, email: regForm.email, password: regForm.password, skin: selectedSkin, via: "email", createdAt: new Date().toLocaleDateString("ru") };
     saveAccounts([...accs, newAcc]);
+    localStorage.setItem(LS_SESSION, newAcc.login);
+    setCurrentUser(newAcc);
+    setCabinetTab("profile");
     setRegErrors({});
     setRegSuccess(true);
   };
@@ -182,6 +185,9 @@ export default function Index() {
     const skinId = generatedSkin || selectedSkin;
     const newAcc: Account = { login: googleForm.nick, email: "google@" + googleForm.nick, password: googleForm.password, skin: skinId, via: "google", createdAt: new Date().toLocaleDateString("ru") };
     saveAccounts([...accs, newAcc]);
+    localStorage.setItem(LS_SESSION, newAcc.login);
+    setCurrentUser(newAcc);
+    setCabinetTab("profile");
     setGoogleErrors({});
     setGoogleSuccess(true);
   };
@@ -226,7 +232,7 @@ export default function Index() {
           </button>
 
           <div className="hidden md:flex items-center gap-1">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter(item => !(currentUser && item.id === "register")).map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(item.id as Section)}
@@ -257,7 +263,7 @@ export default function Index() {
 
         {mobileMenuOpen && (
           <div className="md:hidden bg-mc-dark border-t border-mc-green/20 px-4 py-3 flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter(item => !(currentUser && item.id === "register")).map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(item.id as Section)}
@@ -396,6 +402,21 @@ export default function Index() {
         {activeSection === "register" && (
           <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-20">
             <div className="w-full max-w-md">
+              {currentUser ? (
+                <div className="bg-[#111827] border border-mc-green/30 rounded-2xl p-10 text-center glow-green">
+                  <div className="text-5xl mb-4">✅</div>
+                  <h2 className="font-pixel text-2xl text-white mb-2">Ты уже в игре!</h2>
+                  <p className="text-gray-400 mb-6">Ты вошёл как <span className="text-mc-green font-bold">{currentUser.login}</span>. Регистрация не нужна.</p>
+                  <button
+                    onClick={() => navigate("cabinet")}
+                    className="w-full bg-mc-gold text-mc-dark font-pixel py-3.5 rounded-lg hover:bg-yellow-300 transition-all glow-gold hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <Icon name="User" size={18} />
+                    ОТКРЫТЬ КАБИНЕТ
+                  </button>
+                </div>
+              ) : (
+              <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-mc-green/10 border border-mc-green/30 rounded-xl flex items-center justify-center mx-auto mb-4 glow-green">
                   <Icon name="UserPlus" size={28} className="text-mc-green" />
@@ -700,6 +721,8 @@ export default function Index() {
                     Перейти в кабинет
                   </button>
                 </div>
+              )}
+              </>
               )}
             </div>
           </div>
@@ -1066,7 +1089,7 @@ export default function Index() {
               <span className="font-pixel text-lg text-white">Deze<span style={{ color: "#4ade80" }}>Land</span></span>
             </div>
             <div className="flex flex-wrap gap-6 text-sm text-gray-500 justify-center">
-              {NAV_ITEMS.map((item) => (
+              {NAV_ITEMS.filter(item => !(currentUser && item.id === "register")).map((item) => (
                 <button key={item.id} onClick={() => navigate(item.id as Section)} className="hover:text-white transition-colors">
                   {item.label}
                 </button>
