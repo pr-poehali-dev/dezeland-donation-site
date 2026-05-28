@@ -80,6 +80,34 @@ export default function Index() {
   const [loginForm, setLoginForm] = useState({ login: "", password: "" });
   const [cabinetTab, setCabinetTab] = useState<"login" | "profile">("login");
 
+  // Registration flow
+  type RegStep = "choose" | "email-form" | "google-setup";
+  const [regStep, setRegStep] = useState<RegStep>("choose");
+
+  // Google setup step
+  const [googleForm, setGoogleForm] = useState({ nick: "" });
+  const SKIN_PRESETS = [
+    { id: "steve", label: "Стив", color: "#6d9eeb", emoji: "🧑" },
+    { id: "alex",  label: "Алекс",  color: "#93c47d", emoji: "👩" },
+    { id: "warrior", label: "Воин", color: "#e06666", emoji: "⚔️" },
+    { id: "mage", label: "Маг", color: "#a78bfa", emoji: "🔮" },
+    { id: "ranger", label: "Рейнджер", color: "#fbbf24", emoji: "🏹" },
+    { id: "pirate", label: "Пират", color: "#fb923c", emoji: "🏴‍☠️" },
+  ];
+  const [selectedSkin, setSelectedSkin] = useState("steve");
+  const [skinGenerating, setSkinGenerating] = useState(false);
+  const [generatedSkin, setGeneratedSkin] = useState<string | null>(null);
+
+  const handleGenerateSkin = () => {
+    setSkinGenerating(true);
+    setGeneratedSkin(null);
+    setTimeout(() => {
+      const randomSkins = ["🧟", "🧙", "🥷", "🧝", "🦸", "🤴"];
+      setGeneratedSkin(randomSkins[Math.floor(Math.random() * randomSkins.length)]);
+      setSkinGenerating(false);
+    }, 1800);
+  };
+
   const navigate = (s: Section) => {
     setActiveSection(s);
     setMobileMenuOpen(false);
@@ -284,71 +312,220 @@ export default function Index() {
                 <p className="text-gray-500">Создай аккаунт на DezeLand</p>
               </div>
 
-              <div className="bg-[#111827] border border-white/10 rounded-2xl p-8">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Никнейм</label>
-                    <input
-                      type="text"
-                      placeholder="CoolPlayer2025"
-                      value={regForm.login}
-                      onChange={(e) => setRegForm({ ...regForm, login: e.target.value })}
-                      className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Email</label>
-                    <input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={regForm.email}
-                      onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
-                      className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Пароль</label>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      value={regForm.password}
-                      onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                      className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-400 mb-1.5">Повтор пароля</label>
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      value={regForm.confirm}
-                      onChange={(e) => setRegForm({ ...regForm, confirm: e.target.value })}
-                      className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
-                    />
-                  </div>
+              {/* STEP 1 — выбор способа */}
+              {regStep === "choose" && (
+                <div className="bg-[#111827] border border-white/10 rounded-2xl p-8 animate-fade-in">
+                  <p className="text-center text-gray-400 text-sm mb-6">Выбери способ регистрации</p>
 
-                  <button className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all text-base mt-2 flex items-center justify-center gap-2 hover:scale-105">
-                    <Icon name="UserPlus" size={18} />
-                    СОЗДАТЬ АККАУНТ
+                  {/* Google */}
+                  <button
+                    onClick={() => setRegStep("google-setup")}
+                    className="w-full flex items-center gap-3 bg-white text-gray-900 font-bold py-3.5 px-5 rounded-xl hover:bg-gray-100 transition-all hover:scale-105 mb-3"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+                      <path d="M47.5 24.6c0-1.6-.1-3.1-.4-4.6H24v8.7h13.1c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.2 7.4-10.5 7.4-17.3z" fill="#4285F4"/>
+                      <path d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.9-6c-2.1 1.4-4.9 2.3-8 2.3-6.1 0-11.3-4.1-13.2-9.7H2.7v6.2C6.7 42.8 14.8 48 24 48z" fill="#34A853"/>
+                      <path d="M10.8 28.8A14.6 14.6 0 0 1 10 24c0-1.7.3-3.3.8-4.8v-6.2H2.7A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.7 10.8l8.1-6z" fill="#FBBC04"/>
+                      <path d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.5 30.5 0 24 0 14.8 0 6.7 5.2 2.7 13.2l8.1 6.2C12.7 13.6 17.9 9.5 24 9.5z" fill="#EA4335"/>
+                    </svg>
+                    Войти через Google
                   </button>
-                </div>
 
-                <div className="mt-6 text-center">
-                  <span className="text-gray-500 text-sm">Уже есть аккаунт? </span>
-                  <button onClick={() => navigate("cabinet")} className="text-mc-green text-sm font-semibold hover:text-green-300 transition-colors">
-                    Войти
+                  <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px bg-white/10" />
+                    <span className="text-gray-600 text-xs">или</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+
+                  {/* Email */}
+                  <button
+                    onClick={() => setRegStep("email-form")}
+                    className="w-full flex items-center justify-center gap-2 bg-mc-green text-mc-dark font-pixel py-3.5 px-5 rounded-xl glow-green hover:bg-green-300 transition-all hover:scale-105"
+                  >
+                    <Icon name="Mail" size={18} />
+                    Регистрация по Email
                   </button>
-                </div>
 
-                <div className="mt-6 p-4 bg-mc-green/5 border border-mc-green/20 rounded-lg">
-                  <p className="text-xs text-gray-500 text-center">
-                    После регистрации скачай лаунчер и войди в игру.{" "}
-                    <button onClick={() => navigate("download")} className="text-mc-green hover:underline">
-                      Скачать лаунчер →
+                  <div className="mt-6 text-center">
+                    <span className="text-gray-500 text-sm">Уже есть аккаунт? </span>
+                    <button onClick={() => navigate("cabinet")} className="text-mc-green text-sm font-semibold hover:text-green-300 transition-colors">
+                      Войти
                     </button>
-                  </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* STEP 2A — обычная форма */}
+              {regStep === "email-form" && (
+                <div className="bg-[#111827] border border-white/10 rounded-2xl p-8 animate-fade-in">
+                  <button onClick={() => setRegStep("choose")} className="flex items-center gap-1 text-gray-500 hover:text-white text-sm mb-5 transition-colors">
+                    <Icon name="ArrowLeft" size={14} /> Назад
+                  </button>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">Никнейм</label>
+                      <input
+                        type="text"
+                        placeholder="CoolPlayer2025"
+                        value={regForm.login}
+                        onChange={(e) => setRegForm({ ...regForm, login: e.target.value })}
+                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">Email</label>
+                      <input
+                        type="email"
+                        placeholder="you@example.com"
+                        value={regForm.email}
+                        onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">Пароль</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={regForm.password}
+                        onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
+                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">Повтор пароля</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={regForm.confirm}
+                        onChange={(e) => setRegForm({ ...regForm, confirm: e.target.value })}
+                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                      />
+                    </div>
+                    <button className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105">
+                      <Icon name="UserPlus" size={18} />
+                      СОЗДАТЬ АККАУНТ
+                    </button>
+                  </div>
+                  <div className="mt-5 p-3 bg-mc-green/5 border border-mc-green/20 rounded-lg text-center">
+                    <p className="text-xs text-gray-500">
+                      После регистрации{" "}
+                      <button onClick={() => navigate("download")} className="text-mc-green hover:underline">скачай лаунчер →</button>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2B — Google setup: ник + скин */}
+              {regStep === "google-setup" && (
+                <div className="bg-[#111827] border border-white/10 rounded-2xl p-8 animate-fade-in">
+                  <button onClick={() => setRegStep("choose")} className="flex items-center gap-1 text-gray-500 hover:text-white text-sm mb-5 transition-colors">
+                    <Icon name="ArrowLeft" size={14} /> Назад
+                  </button>
+
+                  {/* Fake Google connected badge */}
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 mb-6">
+                    <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+                      <path d="M47.5 24.6c0-1.6-.1-3.1-.4-4.6H24v8.7h13.1c-.6 3-2.3 5.5-4.9 7.2v6h7.9c4.6-4.2 7.4-10.5 7.4-17.3z" fill="#4285F4"/>
+                      <path d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.9-6c-2.1 1.4-4.9 2.3-8 2.3-6.1 0-11.3-4.1-13.2-9.7H2.7v6.2C6.7 42.8 14.8 48 24 48z" fill="#34A853"/>
+                      <path d="M10.8 28.8A14.6 14.6 0 0 1 10 24c0-1.7.3-3.3.8-4.8v-6.2H2.7A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.7 10.8l8.1-6z" fill="#FBBC04"/>
+                      <path d="M24 9.5c3.4 0 6.5 1.2 8.9 3.5l6.6-6.6C35.9 2.5 30.5 0 24 0 14.8 0 6.7 5.2 2.7 13.2l8.1 6.2C12.7 13.6 17.9 9.5 24 9.5z" fill="#EA4335"/>
+                    </svg>
+                    <span className="text-gray-400 text-xs">Google аккаунт подключён</span>
+                    <Icon name="Check" size={14} className="text-mc-green ml-auto" />
+                  </div>
+
+                  <div className="space-y-5">
+                    {/* Ник */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-400 mb-1.5">
+                        Никнейм в игре
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="CoolPlayer2025"
+                        value={googleForm.nick}
+                        onChange={(e) => setGoogleForm({ ...googleForm, nick: e.target.value })}
+                        className="w-full bg-mc-dark border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-mc-green/60 transition-colors"
+                      />
+                      <p className="text-gray-600 text-xs mt-1">Латиница, цифры, подчёркивание. 3–16 символов.</p>
+                    </div>
+
+                    {/* Скин */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-semibold text-gray-400">Скин персонажа</label>
+                        <button
+                          onClick={handleGenerateSkin}
+                          disabled={skinGenerating}
+                          className="flex items-center gap-1.5 bg-mc-purple/20 border border-mc-purple/40 text-mc-purple text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-mc-purple/30 transition-all disabled:opacity-60"
+                        >
+                          {skinGenerating ? (
+                            <>
+                              <Icon name="Loader" size={12} className="animate-spin" />
+                              Генерирую...
+                            </>
+                          ) : (
+                            <>
+                              <Icon name="Wand2" size={12} />
+                              Сгенерировать
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Generated skin result */}
+                      {generatedSkin && (
+                        <div className="mb-3 p-3 bg-mc-purple/10 border border-mc-purple/30 rounded-xl flex items-center gap-3 animate-fade-in">
+                          <div className="w-14 h-14 bg-mc-dark rounded-lg flex items-center justify-center text-3xl border border-mc-purple/30">
+                            {generatedSkin}
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-semibold">Скин сгенерирован!</p>
+                            <p className="text-gray-500 text-xs">Уникальный скин для твоего аккаунта</p>
+                          </div>
+                          <button
+                            onClick={() => setGeneratedSkin(null)}
+                            className="ml-auto text-gray-600 hover:text-gray-400"
+                          >
+                            <Icon name="X" size={14} />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Preset skins */}
+                      {!generatedSkin && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {SKIN_PRESETS.map((skin) => (
+                            <button
+                              key={skin.id}
+                              onClick={() => setSelectedSkin(skin.id)}
+                              className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all hover:scale-105 ${
+                                selectedSkin === skin.id
+                                  ? "border-mc-green bg-mc-green/10"
+                                  : "border-white/10 bg-mc-dark/60 hover:border-white/20"
+                              }`}
+                            >
+                              <span className="text-2xl">{skin.emoji}</span>
+                              <span className={`text-xs font-semibold ${selectedSkin === skin.id ? "text-mc-green" : "text-gray-400"}`}>
+                                {skin.label}
+                              </span>
+                              {selectedSkin === skin.id && (
+                                <Icon name="Check" size={12} className="text-mc-green" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <button className="w-full bg-mc-green text-mc-dark font-pixel py-4 rounded-lg glow-green hover:bg-green-300 transition-all flex items-center justify-center gap-2 hover:scale-105">
+                      <Icon name="LogIn" size={18} />
+                      СОЗДАТЬ АККАУНТ
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
