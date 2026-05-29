@@ -3,7 +3,7 @@ import Icon from "@/components/ui/icon";
 
 const HERO_IMAGE = "https://cdn.poehali.dev/projects/3c8ce224-7168-4b45-b274-eeb9a4e07598/files/b1a5b102-bdb6-42c7-9dcf-2903bc74fa55.jpg";
 
-type Section = "home" | "register" | "download" | "donate" | "rules" | "cabinet";
+type Section = "home" | "register" | "download" | "donate" | "rules" | "team" | "cabinet";
 
 const NAV_ITEMS = [
   { id: "home", label: "Главная", icon: "Home" },
@@ -11,8 +11,48 @@ const NAV_ITEMS = [
   { id: "download", label: "Лаунчер", icon: "Download" },
   { id: "donate", label: "Донат", icon: "Crown" },
   { id: "rules", label: "Правила", icon: "ScrollText" },
+  { id: "team", label: "Команда", icon: "Users" },
   { id: "cabinet", label: "Кабинет", icon: "User" },
 ] as const;
+
+const TEAM = [
+  {
+    name: "Артём Якунькин",
+    role: "Владелец",
+    tag: "OWNER",
+    tagColor: "#fbbf24",
+    border: "border-mc-gold",
+    glow: "glow-gold",
+    icon: "👑",
+    desc: "Основатель и идейный вдохновитель DezeLand. Отвечает за развитие и стратегию сервера.",
+    initials: "АЯ",
+    gradient: "from-mc-gold to-yellow-600",
+  },
+  {
+    name: "Кирилл Ханов",
+    role: "Программист",
+    tag: "DEV",
+    tagColor: "#38bdf8",
+    border: "border-mc-blue",
+    glow: "glow-blue",
+    icon: "💻",
+    desc: "Разрабатывает плагины и отвечает за техническую часть сервера.",
+    initials: "КХ",
+    gradient: "from-mc-blue to-blue-600",
+  },
+  {
+    name: "Рома Татаренков",
+    role: "Тестировщик",
+    tag: "QA",
+    tagColor: "#4ade80",
+    border: "border-mc-green",
+    glow: "glow-green",
+    icon: "🔍",
+    desc: "Находит баги и тестирует обновления перед выходом на сервер.",
+    initials: "РТ",
+    gradient: "from-mc-green to-green-600",
+  },
+];
 
 const DONATE_PACKS = [
   {
@@ -911,6 +951,55 @@ export default function Index() {
               <p className="text-gray-400 text-sm">
                 Незнание правил не освобождает от ответственности. Администрация оставляет за собой право
                 блокировать аккаунты без предупреждения при грубых нарушениях.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ TEAM ═══ */}
+        {activeSection === "team" && (
+          <div className="min-h-[calc(100vh-64px)] px-4 py-20 max-w-5xl mx-auto">
+            <div className="text-center mb-14">
+              <div className="w-16 h-16 bg-mc-gold/10 border border-mc-gold/30 rounded-xl flex items-center justify-center mx-auto mb-4 glow-gold">
+                <Icon name="Users" size={28} className="text-mc-gold" />
+              </div>
+              <h1 className="font-pixel text-4xl text-white mb-3">Наша команда</h1>
+              <p className="text-gray-400 max-w-lg mx-auto">Люди, которые делают DezeLand лучше каждый день</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {TEAM.map((member) => (
+                <div
+                  key={member.name}
+                  className={`relative bg-[#111827] border ${member.border} rounded-2xl p-8 flex flex-col items-center text-center card-hover ${member.glow}`}
+                >
+                  {/* Аватар с инициалами */}
+                  <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${member.gradient} flex items-center justify-center font-pixel text-3xl text-mc-dark mb-5 shadow-lg`}>
+                    {member.initials}
+                  </div>
+
+                  {/* Иконка роли */}
+                  <div className="text-3xl mb-3">{member.icon}</div>
+
+                  {/* Бейдж */}
+                  <div
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1 mb-3 border text-xs font-pixel"
+                    style={{ color: member.tagColor, borderColor: member.tagColor + "50", backgroundColor: member.tagColor + "15" }}
+                  >
+                    [{member.tag}]
+                  </div>
+
+                  <h3 className="font-pixel text-xl text-white mb-1">{member.name}</h3>
+                  <p className="text-sm font-semibold mb-3" style={{ color: member.tagColor }}>{member.role}</p>
+                  <p className="text-gray-500 text-sm leading-relaxed">{member.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 bg-[#111827] border border-white/5 rounded-xl p-6 text-center">
+              <p className="text-gray-500 text-sm">
+                Хочешь присоединиться к команде?{" "}
+                <span className="text-mc-green font-semibold">Напиши нам в Discord</span>
               </p>
             </div>
           </div>
